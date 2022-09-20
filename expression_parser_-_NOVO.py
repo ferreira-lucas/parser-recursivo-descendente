@@ -14,18 +14,23 @@
 
 from lib2to3.pgen2.token import EQUAL
 import re
-
-
-SYMBOL_TABLE = {'cos': {'type':'method', 'value': 'teste1(b)'}}
+import math
 
 
 
+SYMBOL_TABLE = {'cos': {'type':'method', 'value': 'var = cos'},'sin': {'type':'method', 'value': 'var = sin'}}
+_locals = {}
+
+def cos(value):
+    return math.cos(value)
+
+def sin(value):
+    return math.sin(value)
 
 def addSymbol(symbol):
     """ adiciona token e tipo na tabela de simbolos"""
     SYMBOL_TABLE[symbol['token']] = symbol['data']
   
-
 def addValue(token, symbol):
     """ adiciona o valor ao simbolo existente na tabela"""
     SYMBOL_TABLE[token]["value"] = symbol
@@ -33,6 +38,8 @@ def addValue(token, symbol):
 def getSymbolData(token):
     """ Captura o valor existente na tabela """
     return SYMBOL_TABLE[token]
+
+
 
 class Lexer:
     """Implements the expression lexer."""
@@ -42,7 +49,7 @@ class Lexer:
     OPERATOR = 3
     ID = 4
     NUM = 5
-    EQUAL = 6
+    _EQUAL = 6
 
 
     def __init__(self, data):
@@ -85,7 +92,7 @@ class Lexer:
             char = self.data[self.current]
             self.current += 1
             if char == "=":
-                return (Lexer.EQUAL, char)
+                return (Lexer._EQUAL, char)
             if char == "(":
                 return (Lexer.OPEN_PAR, char)
             if char == ")":
@@ -216,16 +223,7 @@ def parse_T_prime(data):
     return None
 
 def parse_F(data):
-    ##################
-    # print("MANDEI PRO G")
-    
-    # try:
-    #     token, value = next(data)
-    # except StopIteration:
-    #     return 1
-    # print("valores: ",token, value)
-    # data.put_back()     
-    ##################
+
     G = parse_G(data)
     F_prime = parse_F_prime(data)
 
@@ -240,7 +238,6 @@ def parse_F_prime(data):
         if operator not in "^":
             data.put_back()
             return None
-        print("MANDEI PRO G UMA POTENCIA")
         G = parse_G(data)
         _F_prime = parse_F_prime(data)  # noqa
         return G if operator == "^" else None
@@ -280,14 +277,29 @@ def parse_X(data):
     if _data['type'] == 'variable':
         
         _value = _data['value']
-        return _value
-    # if _data['value'] == 'method':
-    #     A = parse_A(data)
-    #     return A
+        return float(_value)
+
+    if _data['value'] == 'method':
+
+        data.put_back()
+        
+        
+        E = parse_E(data)
+        #### TESTES ####
+        _method = _data['value']+"("+str(E)+")"
+        exec(_method, None, _locals)
+        return float(_locals['var'])
+        
     raise data.error(f"Unexpected token: {value}.")
     
 
 def parse_A(data):
+    try:
+        token, value = next(data)
+    except StopIteration:
+        return 1
+    _data = getSymbolData(value)
+    
     return 1
 
 def parse(source_code):
@@ -299,8 +311,8 @@ def parse(source_code):
 if __name__ == "__main__":
     expressions = [
         "1 + 1",
-        "x = 10 x + 9 + 7",
-        "2 - 2",
+        "x = 10 x + (9 + 7)",
+        "cos(3)",
         "4 ^ 4"
     
 
