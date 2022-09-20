@@ -161,7 +161,7 @@ def parse_S(data):
         except StopIteration:
             return 0
         data.put_back()
-        addValue(identifier,data)
+        addValue(identifier,parse_E(data))
         print(SYMBOL_TABLE)
     
     data.put_back()
@@ -217,14 +217,14 @@ def parse_T_prime(data):
 
 def parse_F(data):
     ##################
-    print("MANDEI PRO G")
+    # print("MANDEI PRO G")
     
-    try:
-        token, value = next(data)
-    except StopIteration:
-        return None
-    print("valores: ",token, value)
-    data.put_back()     
+    # try:
+    #     token, value = next(data)
+    # except StopIteration:
+    #     return 1
+    # print("valores: ",token, value)
+    # data.put_back()     
     ##################
     G = parse_G(data)
     F_prime = parse_F_prime(data)
@@ -240,7 +240,7 @@ def parse_F_prime(data):
         if operator not in "^":
             data.put_back()
             return None
-        print("MANDEI PRO G")
+        print("MANDEI PRO G UMA POTENCIA")
         G = parse_G(data)
         _F_prime = parse_F_prime(data)  # noqa
         return G if operator == "^" else None
@@ -268,8 +268,6 @@ def parse_G(data):
         X = parse_X(data)
         return X
 
-    print("CHEGUEI AQUI!!!!")
-    print("valores: ",token, value)
     raise data.error(f"Unexpected token: {value}.")
 
 def parse_X(data):
@@ -280,9 +278,9 @@ def parse_X(data):
     _data = getSymbolData(value)
     
     if _data['type'] == 'variable':
-        E = parse_E(_data['value'])
-        print(_data['type'])
-        return E
+        
+        _value = _data['value']
+        return _value
     # if _data['value'] == 'method':
     #     A = parse_A(data)
     #     return A
@@ -300,7 +298,10 @@ def parse(source_code):
 
 if __name__ == "__main__":
     expressions = [
-        "x = 10 x + 4"
+        "1 + 1",
+        "x = 10 x + 9 + 7",
+        "2 - 2",
+        "4 ^ 4"
     
 
     
