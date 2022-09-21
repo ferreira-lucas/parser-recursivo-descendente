@@ -31,9 +31,9 @@ def addSymbol(symbol):
     """ adiciona token e tipo na tabela de simbolos"""
     SYMBOL_TABLE[symbol['token']] = symbol['data']
   
-def addValue(token, symbol):
+def addValue(token, value):
     """ adiciona o valor ao simbolo existente na tabela"""
-    SYMBOL_TABLE[token]["value"] = symbol
+    SYMBOL_TABLE[token]['value'] = value
 
 def getSymbolData(token):
     """ Captura o valor existente na tabela """
@@ -136,7 +136,7 @@ def parse_P(data):
     """Parse an Expression P."""
     S = parse_S(data)
     P_prime = parse_P_prime(data)
-    return S if P_prime is None else S * P_prime
+    return S if P_prime is None else S + P_prime
 
 def parse_P_prime(data):
     """Parse an Expression P'."""
@@ -166,10 +166,6 @@ def parse_S(data):
             token, equal = next(data)
         except StopIteration:
             return 0
-        
-        
-    
-
 
         if equal != "=":
              data.error(f"Unexpected token: '{equal}'.")
@@ -287,7 +283,9 @@ def parse_X(data):
     if _data['type'] == 'variable':
         
         _value = _data['value']
+        print(SYMBOL_TABLE)
         return float(_value)
+
     if _data['type'] == 'method':
         
         A = parse_A(data)
@@ -322,6 +320,8 @@ def parse(source_code):
 if __name__ == "__main__":
     expressions = [
             "cos(0)",
+            """X = 12
+            X * 2"""
 
     
 
