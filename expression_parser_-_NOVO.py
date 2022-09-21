@@ -158,24 +158,31 @@ def parse_S(data):
     """ SE O PROXIMO FOR '=' CHAMA O METODO addValue"""
     try:
         token, identifier = next(data)
+        print("ESTOU NO S COM O: ", identifier)
     except StopIteration:
         return 0
     if token == Lexer.ID:
+        print("SOU UM ID: ", identifier)
         _data = getSymbolData(identifier)
-        if _data["type"] == "variable":
+        if _data["type"] == "variable" and _data["value"] is None:
+            print("SOU UMA VARIAVEl", identifier)
             try:
                 token, equal = next(data)
             except StopIteration:
                 return 0
-
             if equal != "=":
-                data.error(f"Unexpected token: '{equal}'.")
+                data.error(f"Unexpected1 token: '{equal}'.")
+            print("ACHEI O = : ", identifier, equal)
             try:
                 token, value = next(data)
             except StopIteration:
                 return 0
+            print("PEGUEI MEU VALOR: ", identifier, value)
             data.put_back()
-            addValue(identifier, parse_E(data))
+
+            addValue(identifier, value)
+
+            return 0
 
     data.put_back()
     E = parse_E(data)
@@ -271,7 +278,7 @@ def parse_G(data):
     if token == Lexer.NUM:
         return float(value)
     if token == Lexer.ID:
-
+        print("PASSEI AQUI COM O: ", value)
         data.put_back()
         X = parse_X(data)
         return X
@@ -284,12 +291,16 @@ def parse_X(data):
         token, value = next(data)
     except StopIteration:
         return 1
+    print("CHEGUEI NO parse_X com o valor: ", value)
+
     _data = getSymbolData(value)
 
     if _data["type"] == "variable":
 
         _value = _data["value"]
-        print(SYMBOL_TABLE)
+        if _value is None:
+            _value = 0
+
         return float(_value)
 
     if _data["type"] == "method":
@@ -326,10 +337,14 @@ def parse(source_code):
 
 if __name__ == "__main__":
     expressions = [
-        "x = 2 x + 10",
+        "x = 2 y = 3 x + y",
         "1 + 1",
         "5 * 4",
         "10 / 2",
     ]
+
+    """        "1 + 1",
+        "5 * 4",
+        "10 / 2","""
     for expression in expressions:
         print(f"Expression: {expression}\t Result: {parse(expression)}")
