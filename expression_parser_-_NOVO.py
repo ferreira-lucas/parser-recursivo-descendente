@@ -12,20 +12,23 @@
 # F = ( E ) | num
 # num = [+-]?([0-9]+(.[0-9]+)?|.[0-9]+)(e[0-9]+)+)?)
 
-from lib2to3.pgen2.token import EQUAL
-import re
 import math
+import re
 
-
-
-SYMBOL_TABLE = {'cos': {'type':'method', 'value': 'var = cos'},'sin': {'type':'method', 'value': 'var = sin'}}
+SYMBOL_TABLE = {
+    "cos": {"type": "method", "value": "var = cos"},
+    "sin": {"type": "method", "value": "var = sin"},
+}
 _locals = {}
+
 
 def cos(value):
     return math.cos(value)
 
+
 def sin(value):
     return math.sin(value)
+
 
 def addSymbol(symbol):
     """ adiciona token e tipo na tabela de simbolos"""
@@ -35,10 +38,10 @@ def addValue(token, value):
     """ adiciona o valor ao simbolo existente na tabela"""
     SYMBOL_TABLE[token]['value'] = value
 
-def getSymbolData(token):
-    """ Captura o valor existente na tabela """
-    return SYMBOL_TABLE[token]
 
+def getSymbolData(token):
+    """Captura o valor existente na tabela"""
+    return SYMBOL_TABLE[token]
 
 
 class Lexer:
@@ -51,7 +54,6 @@ class Lexer:
     NUM = 5
     _EQUAL = 6
 
-
     def __init__(self, data):
         """Initialize object."""
         self.data = data
@@ -60,16 +62,10 @@ class Lexer:
         self.num_re = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)(e\d+)?")
         self.variable = re.compile(r"[a-zA-Z][a-zA-Z0-9]*")
 
-        
-        
-
-        
     def __iter__(self):
         """Start the lexer iterator."""
         self.current = 0
         return self
-
-
 
     def error(self, msg=None):
         err = (
@@ -103,30 +99,32 @@ class Lexer:
             # Do not handle minus operator.
             if char in "+/*^":
                 return (Lexer.OPERATOR, char)
-            match = self.num_re.match(self.data[self.current - 1 :])
+            match = self.num_re.match(self.data[self.current - 1])
             if match is None:
                 # If there is no match we may have a minus operator
-                
+
                 if char == "-":
                     return (Lexer.OPERATOR, char)
-                
-                match = self.variable.match(self.data[self.current - 1 :])
+
+                match = self.variable.match(self.data[self.current - 1])
                 if match is not None:
                     self.current += match.end() - 1
                     """ TENTA ADICIONAR O METODO addSymbol"""
-                    new_symbol = {'token':match.group().replace(" ", ""), 'data': {'type':'variable', 'value': None}}
+                    new_symbol = {
+                        "token": match.group().replace(" ", ""),
+                        "data": {"type": "variable", "value": None},
+                    }
 
-                    if new_symbol['token'] not in SYMBOL_TABLE.keys():
+                    if new_symbol["token"] not in SYMBOL_TABLE.keys():
                         addSymbol(new_symbol)
-                        
 
                     return (Lexer.ID, match.group().replace(" ", ""))
                 # If we get here, there is an error an unexpected char.
                 raise Exception(
                     f"Error at {self.current}: "
                     f"{self.data[self.current - 1:self.current + 10]}"
-                )    
-            
+                )
+
             self.current += match.end() - 1
             return (Lexer.NUM, match.group().replace(" ", ""))
         raise StopIteration()
@@ -138,6 +136,7 @@ def parse_P(data):
     P_prime = parse_P_prime(data)
     return S if P_prime is None else S + P_prime
 
+
 def parse_P_prime(data):
     """Parse an Expression P'."""
     try:
@@ -146,10 +145,11 @@ def parse_P_prime(data):
         return None
     if value is not None:
         S = parse_S(data)
-        P_prime  = parse_P_prime(data)
+        P_prime = parse_P_prime(data)
         return S if P_prime is None else S + P_prime
     data.put_back()
     return None
+
 
 def parse_S(data):
     """Parse an Expression S."""
@@ -160,25 +160,26 @@ def parse_S(data):
     except StopIteration:
         return 0
     _data = getSymbolData(identifier)
-    
-    if token == Lexer.ID and _data['type'] == 'variable':
+
+    if token == Lexer.ID and _data["type"] == "variable":
         try:
             token, equal = next(data)
         except StopIteration:
             return 0
 
         if equal != "=":
-             data.error(f"Unexpected token: '{equal}'.")
+            data.error(f"Unexpected token: '{equal}'.")
         try:
             token, value = next(data)
         except StopIteration:
             return 0
         data.put_back()
-        addValue(identifier,parse_E(data))
+        addValue(identifier, parse_E(data))
 
     data.put_back()
     E = parse_E(data)
     return E
+
 
 def parse_E(data):
     """Parse an expression E."""
@@ -227,12 +228,14 @@ def parse_T_prime(data):
     data.put_back()
     return None
 
+
 def parse_F(data):
- 
+
     G = parse_G(data)
     F_prime = parse_F_prime(data)
 
-    return G if F_prime is None else G ** F_prime
+    return G if F_prime is None else G**F_prime
+
 
 def parse_F_prime(data):
     try:
@@ -243,17 +246,18 @@ def parse_F_prime(data):
         if operator not in "^":
             data.put_back()
             return None
-        
+
         G = parse_G(data)
         _F_prime = parse_F_prime(data)  # noqa
         return G if operator == "^" else None
-        
+
     data.put_back()
     return None
 
+
 def parse_G(data):
     """Parse an expression G."""
-   
+
     try:
         token, value = next(data)
     except StopIteration:
@@ -273,6 +277,7 @@ def parse_G(data):
 
     raise data.error(f"Unexpected token: {value}.")
 
+
 def parse_X(data):
     try:
         token, value = next(data)
@@ -289,18 +294,18 @@ def parse_X(data):
     if _data['type'] == 'method':
         
         A = parse_A(data)
-    
-        _method = _data['value']+"("+str(A)+")"
+
+        _method = _data["value"] + "(" + str(A) + ")"
         exec(_method, None, _locals)
-        return float(_locals['var'])
-        
+        return float(_locals["var"])
+
     raise data.error(f"Unexpected token: {value}.")
-    
+
 
 def parse_A(data):
     try:
         token, value = next(data)
-   
+
     except StopIteration:
         raise Exception("Unexpected end of source.") from None
     if token == Lexer.OPEN_PAR:
@@ -308,8 +313,9 @@ def parse_A(data):
         if next(data) != (Lexer.CLOSE_PAR, ")"):
             data.error("Unbalanced parenthesis.")
         return E
-    
+
     return None
+
 
 def parse(source_code):
     """Parse the source code."""
