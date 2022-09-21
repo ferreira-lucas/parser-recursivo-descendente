@@ -83,6 +83,9 @@ class Lexer:
     def put_back(self):
         self.current = self.previous
 
+    def put_back_2(self):
+        self.current = self.previous - 1
+
     def __next__(self):
         """Retrieve the next token."""
         if self.current < len(self.data):
@@ -156,11 +159,18 @@ def parse_S(data):
         token, identifier = next(data)
     except StopIteration:
         return 0
-    if token == Lexer.ID:
+    _data = getSymbolData(identifier)
+    
+    if token == Lexer.ID and _data['type'] == 'variable':
         try:
             token, equal = next(data)
         except StopIteration:
             return 0
+        
+        
+    
+
+
         if equal != "=":
              data.error(f"Unexpected token: '{equal}'.")
         try:
@@ -169,8 +179,7 @@ def parse_S(data):
             return 0
         data.put_back()
         addValue(identifier,parse_E(data))
-        print(SYMBOL_TABLE)
-    
+
     data.put_back()
     E = parse_E(data)
     return E
@@ -223,7 +232,7 @@ def parse_T_prime(data):
     return None
 
 def parse_F(data):
-
+ 
     G = parse_G(data)
     F_prime = parse_F_prime(data)
 
@@ -238,6 +247,7 @@ def parse_F_prime(data):
         if operator not in "^":
             data.put_back()
             return None
+        
         G = parse_G(data)
         _F_prime = parse_F_prime(data)  # noqa
         return G if operator == "^" else None
@@ -278,15 +288,11 @@ def parse_X(data):
         
         _value = _data['value']
         return float(_value)
-
-    if _data['value'] == 'method':
-
-        data.put_back()
+    if _data['type'] == 'method':
         
-        
-        E = parse_E(data)
-        #### TESTES ####
-        _method = _data['value']+"("+str(E)+")"
+        A = parse_A(data)
+    
+        _method = _data['value']+"("+str(A)+")"
         exec(_method, None, _locals)
         return float(_locals['var'])
         
@@ -296,11 +302,16 @@ def parse_X(data):
 def parse_A(data):
     try:
         token, value = next(data)
+   
     except StopIteration:
-        return 1
-    _data = getSymbolData(value)
+        raise Exception("Unexpected end of source.") from None
+    if token == Lexer.OPEN_PAR:
+        E = parse_E(data)
+        if next(data) != (Lexer.CLOSE_PAR, ")"):
+            data.error("Unbalanced parenthesis.")
+        return E
     
-    return 1
+    return None
 
 def parse(source_code):
     """Parse the source code."""
@@ -310,10 +321,8 @@ def parse(source_code):
 
 if __name__ == "__main__":
     expressions = [
-        "1 + 1",
-        "x = 10 x + (9 + 7)",
-        "cos(3)",
-        "4 ^ 4"
+            "cos(0)",
+
     
 
     
