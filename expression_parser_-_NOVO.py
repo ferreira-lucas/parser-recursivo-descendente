@@ -100,14 +100,14 @@ class Lexer:
             # Do not handle minus operator.
             if char in "+/*^":
                 return (Lexer.OPERATOR, char)
-            match = self.num_re.match(self.data[self.current - 1])
+            match = self.num_re.match(self.data[self.current - 1 :])
             if match is None:
                 # If there is no match we may have a minus operator
 
                 if char == "-":
                     return (Lexer.OPERATOR, char)
 
-                match = self.variable.match(self.data[self.current - 1])
+                match = self.variable.match(self.data[self.current - 1 :])
                 if match is not None:
                     self.current += match.end() - 1
                     """ TENTA ADICIONAR O METODO addSymbol"""
@@ -160,22 +160,22 @@ def parse_S(data):
         token, identifier = next(data)
     except StopIteration:
         return 0
-    _data = getSymbolData(identifier)
+    if token == Lexer.ID:
+        _data = getSymbolData(identifier)
+        if _data["type"] == "variable":
+            try:
+                token, equal = next(data)
+            except StopIteration:
+                return 0
 
-    if token == Lexer.ID and _data["type"] == "variable":
-        try:
-            token, equal = next(data)
-        except StopIteration:
-            return 0
-
-        if equal != "=":
-            data.error(f"Unexpected token: '{equal}'.")
-        try:
-            token, value = next(data)
-        except StopIteration:
-            return 0
-        data.put_back()
-        addValue(identifier, parse_E(data))
+            if equal != "=":
+                data.error(f"Unexpected token: '{equal}'.")
+            try:
+                token, value = next(data)
+            except StopIteration:
+                return 0
+            data.put_back()
+            addValue(identifier, parse_E(data))
 
     data.put_back()
     E = parse_E(data)
@@ -324,7 +324,10 @@ def parse(source_code):
 
 if __name__ == "__main__":
     expressions = [
-        "x = 2 x + 4",
+        "x = 2 x + 10",
+        "1 + 1",
+        "5 * 4",
+        "10 / 2",
     ]
     for expression in expressions:
         print(f"Expression: {expression}\t Result: {parse(expression)}")
