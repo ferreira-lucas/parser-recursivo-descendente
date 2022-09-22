@@ -201,51 +201,65 @@ def parse_S(data):
 
 
 def parse_E(data):
-    """Parse an expression E."""
+    """Parse rule E."""
+    # print("E -> TE'")
+    # E -> TE'  { $0 = T + E' }
     T = parse_T(data)
     E_prime = parse_E_prime(data)
-    return T if E_prime is None else T + E_prime
+    return T + (E_prime or 0)
 
 
 def parse_E_prime(data):
-    """Parse an expression E'."""
+    """Parse rule E'."""
+    # print("E' -> +TE' | -TE'| &")
     try:
         token, operator = next(data)
     except StopIteration:
-        return None
-    if token == Lexer.OPERATOR:
-        if operator not in "+-":
-            data.error(f"Unexpected token: '{operator}'.")
+        # E' -> &  { $0 = 0 }
+        return 0
+    if token == Lexer.OPERATOR and operator in "+-":
+        # E' -> +TE' { $0 = T + E' } | -TE' { $0 = T - E' }
         T = parse_T(data)
-        # We don't need the result of the recursion,
-        # only the recuscion itself
-        _E_prime = parse_E_prime(data)  # noqa
-        return T if operator == "+" else -1 * T
+        E_prime = parse_E_prime(data)
+        return (T if operator == "+" else -1 * T) + (E_prime or 0)
+
+    if token not in [Lexer.OPERATOR, Lexer.OPEN_PAR, Lexer.CLOSE_PAR]:
+        data.error(f"Invalid character: {operator}")
+
+    # E' -> &  { $0 = 0 }
     data.put_back()
-    return None
+    return 0
 
 
 def parse_T(data):
-    """Parse an expression T."""
+    """Parse rule T."""
+    # print("T -> FT'")
+    # T -> FT'  { $0 = F * T' }
     F = parse_F(data)
     T_prime = parse_T_prime(data)
-    return F if T_prime is None else F * T_prime
+    return F * (T_prime or 1)
 
 
 def parse_T_prime(data):
-    """Parse an expression T'."""
+    """Parse rule T'."""
+    # print("T' -> *FT' | /FT'| &")
     try:
         token, operator = next(data)
     except StopIteration:
-        return None
+        # T' -> &  { $0 = 1 }
+        return 1
     if token == Lexer.OPERATOR and operator in "*/":
+        # T' -> *FT' { $0 = F*T' } | /FT' {$0 = F*(1/T')}
         F = parse_F(data)
-        # We don't need the result of the recursion,
-        # only the recuscion itself
-        _T_prime = parse_T_prime(data)  # noqa
-        return F if operator == "*" else 1 / F
+        T_prime = parse_T_prime(data)
+        return (F if operator == "*" else 1 / F) * T_prime
+
+    if token not in [Lexer.OPERATOR, Lexer.OPEN_PAR, Lexer.CLOSE_PAR]:
+        data.error(f"Invalid character: {operator}")
+
+    # T' -> &  { $0 = 1 }
     data.put_back()
-    return None
+    return 1
 
 
 def parse_F(data):
@@ -356,12 +370,13 @@ def parse(source_code):
 if __name__ == "__main__":
 
     expressions = [
-        ("x = 2 y = 3 x + y", 2 + 3),
+        ("x = 2 y = 3 z = 5 x + y * z", 2 + 3 * 5),
         ("cos(3)", math.cos(3)),
         ("5 * 4", 5 * 4),
         ("10 / 2", 10 / 2),
         ("5 ^ 5", 5**5),
         ("5 ** 5", 5**5),
+        ("sin(3)", math.sin(3)),
         ("4 * 4 + 3 ** 3", 4 * 4 + 3**3),
         ("1 + 1", 1 + 1),
         ("2 * 3", 2 * 3),
@@ -381,7 +396,7 @@ if __name__ == "__main__":
         ("3 - ((8 + 3) * -2)", 3 - ((8 + 3) * -2)),
         ("2.01e2 - 200", 2.01e2 - 200),
         ("2*3*4", 2 * 3 * 4),
-        ("2 + 3 + 4 * 3 * 2 + 2", 2 + 3 + 4 * 3 * 2 * 2),
+        ("2 + 3 + 4 * 3 * 2 + 2", 2 + 3 + 4 * 3 * 2 + 2),
         ("10 + 11", 10 + 11),
     ]
 
