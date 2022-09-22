@@ -19,19 +19,23 @@ SYMBOL_TABLE = {
     "cos": {"type": "method", "value": "var = cos"},
     "sin": {"type": "method", "value": "var = sin"},
 }
+
+""" variavel responsavel por trazer o resultado do methodo exec()"""
 _locals = {}
 
 
 def cos(value):
+    """methodo fixo para calcular coseno"""
     return math.cos(value)
 
 
 def sin(value):
+    """methodo fixo para calcular seno"""
     return math.sin(value)
 
 
 def addSymbol(symbol):
-    """adiciona token e tipo na tabela de simbolos"""
+    """adiciona token e tipo na tabela de simbolos Obs. value = None"""
     SYMBOL_TABLE[symbol["token"]] = symbol["data"]
 
 
@@ -80,8 +84,16 @@ class Lexer:
     def put_back(self):
         self.current = self.previous
 
-    def put_back_2(self):
-        self.current = self.previous - 1
+    def lookAhead(self, data):
+        """funcao responsavel por executar um next() retornando as informacoes do proximo com a garantia que será
+        mantido o valor atual do current (necessario quando precisamos olhar mais de uma casa a frente)"""
+
+        previous = self.previous
+        current = self.current
+        token, value = next(data)
+        self.current = current
+        self.previous = previous
+        return (token, value)
 
     def __next__(self):
         """Retrieve the next token."""
@@ -106,11 +118,12 @@ class Lexer:
 
                 if char == "-":
                     return (Lexer.OPERATOR, char)
-
+                # verifica se é uma variavel
                 match = self.variable.match(self.data[self.current - 1 :])
                 if match is not None:
                     self.current += match.end() - 1
-                    """ TENTA ADICIONAR O METODO addSymbol"""
+
+                    # tenta adicionar na tabela de sibolos
                     new_symbol = {
                         "token": match.group().replace(" ", ""),
                         "data": {"type": "variable", "value": None},
@@ -155,31 +168,29 @@ def parse_P_prime(data):
 def parse_S(data):
     """Parse an Expression S."""
 
-    """ SE O PROXIMO FOR '=' CHAMA O METODO addValue"""
     try:
         token, identifier = next(data)
-    # print("ESTOU NO S COM O: ", identifier)
     except StopIteration:
         return 0
     if token == Lexer.ID:
-        # print("SOU UM ID: ", identifier)
+        # pega as informacoes que existem na tabela de simbolos
         _data = getSymbolData(identifier)
+
+        # varifica se já foi atribuido valor a esse simbolo
         if _data["type"] == "variable" and _data["value"] is None:
-            # print("SOU UMA VARIAVEl", identifier)
+
             try:
                 token, equal = next(data)
             except StopIteration:
                 return 0
             if equal != "=":
-                data.error(f"Unexpected1 token: '{equal}'.")
-            # print("ACHEI O = : ", identifier, equal)
+                data.error(f"Unexpected token: '{equal}'.")
             try:
                 token, value = next(data)
             except StopIteration:
                 return 0
-            # print("PEGUEI MEU VALOR: ", identifier, value)
             data.put_back()
-
+            # adiciona valor na tabela de simbolos
             addValue(identifier, value)
 
             return 0
@@ -251,13 +262,18 @@ def parse_F_prime(data):
     except StopIteration:
         return None
     if token == Lexer.OPERATOR:
-        if operator not in "^":
-            data.put_back()
-            return None
+        x, y = data.lookAhead(data)
+        # verifica se o operador representa uma potencia
+        if operator == "^" or (operator == "*" and y == "*"):
+            # se o simbolo for ** anda pra frente
+            if y == "*":
+                next(data)
 
-        G = parse_G(data)
-        _F_prime = parse_F_prime(data)  # noqa
-        return G if operator == "^" else None
+            G = parse_G(data)
+            _F_prime = parse_F_prime(data)  # noqa
+            return G if (operator == "^" or operator == "*") else None
+        data.put_back()
+        return None
 
     data.put_back()
     return None
@@ -278,7 +294,7 @@ def parse_G(data):
     if token == Lexer.NUM:
         return float(value)
     if token == Lexer.ID:
-        # print("PASSEI AQUI COM O: ", value)
+        # caso for uma ID volta uma casa e executa parse x
         data.put_back()
         X = parse_X(data)
         return X
@@ -291,10 +307,10 @@ def parse_X(data):
         token, value = next(data)
     except StopIteration:
         return 1
-    # print("CHEGUEI NO parse_X com o valor: ", value)
-
+    # captura o valor do simbolo
     _data = getSymbolData(value)
 
+    # caso seja uma variavel retorna o valor dela
     if _data["type"] == "variable":
 
         _value = _data["value"]
@@ -303,11 +319,13 @@ def parse_X(data):
 
         return float(_value)
 
+    # se for um methodo executa o mesmo
     if _data["type"] == "method":
 
         A = parse_A(data)
 
         _method = _data["value"] + "(" + str(A) + ")"
+        # funcao externa para executar string
         exec(_method, None, _locals)
         return float(_locals["var"])
 
@@ -336,15 +354,37 @@ def parse(source_code):
 
 
 if __name__ == "__main__":
+
     expressions = [
-        "x = 2 y = 3 x + y",
-        "cos(3)",
-        "5 * 4",
-        "10 / 2",
+        ("x = 2 y = 3 x + y", 2 + 3),
+        ("cos(3)", math.cos(3)),
+        ("5 * 4", 5 * 4),
+        ("10 / 2", 10 / 2),
+        ("5 ^ 5", 5**5),
+        ("5 ** 5", 5**5),
+        ("4 * 4 + 3 ** 3", 4 * 4 + 3**3),
+        ("1 + 1", 1 + 1),
+        ("2 * 3", 2 * 3),
+        ("5 / 4", 5 / 4),
+        ("2 * 3 + 1", 2 * 3 + 1),
+        ("1 + 2 * 3", 1 + 2 * 3),
+        ("(2 * 3) + 1", (2 * 3) + 1),
+        ("2 * (3 + 1)", 2 * (3 + 1)),
+        ("(2 + 1) * 3", (2 + 1) * 3),
+        ("-2 + 3", -2 + 3),
+        ("5 + (-2)", 5 + (-2)),
+        ("5 * -2", 5 * -2),
+        ("-1 - -2", -1 - -2),
+        ("-1 - 2", -1 - 2),
+        ("4 - 5", 4 - 5),
+        ("1 - 2", 1 - 2),
+        ("3 - ((8 + 3) * -2)", 3 - ((8 + 3) * -2)),
+        ("2.01e2 - 200", 2.01e2 - 200),
+        ("2*3*4", 2 * 3 * 4),
+        ("2 + 3 + 4 * 3 * 2 + 2", 2 + 3 + 4 * 3 * 2 * 2),
+        ("10 + 11", 10 + 11),
     ]
 
-    """        "1 + 1",
-        "5 * 4",
-        "10 / 2","""
-    for expression in expressions:
-        print(f"Expression: {expression}\t Result: {parse(expression)}")
+    for expression, expected in expressions:
+        result = "PASS" if parse(expression) == expected else "FAIL"
+        print(f"Expression: {expression} - {result}")
