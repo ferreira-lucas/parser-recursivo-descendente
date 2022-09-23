@@ -370,7 +370,10 @@ def parse(source_code):
 if __name__ == "__main__":
 
     expressions = [
-        ("x = 2 y = 3 z = 5 x + y * z", 2 + 3 * 5),
+        ("""x = 2
+        y = 3
+        z = 5
+        x + y * z""", 2 + 3 * 5),
         ("cos(3)", math.cos(3)),
         ("5 * 4", 5 * 4),
         ("10 / 2", 10 / 2),
